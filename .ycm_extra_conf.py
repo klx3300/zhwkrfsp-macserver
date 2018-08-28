@@ -1,6 +1,7 @@
 import os 
 import ycm_core 
 flags = [ 
+    '-std=gnu17',
     '-Werror', 
     '-Weverything', 
     '-Wno-documentation', 
@@ -15,6 +16,7 @@ flags = [
     '-Wno-padded', 
     '-Wno-old-style-cast',
     '-Wno-weak-vtables',
+    '-Wno-gnu-statement-expression'
 ] 
 compilation_database_folder = '' 
 if compilation_database_folder: 
