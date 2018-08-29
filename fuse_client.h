@@ -28,5 +28,6 @@ int do_readdir(int fd, qBinarySafeString* result);
 int do_releasedir(int fd);
 int do_access(const char* path, int mode);
 int do_creat(const char* path, mode_t mode);
+int do_unlink(const char* path);
 
 #endif

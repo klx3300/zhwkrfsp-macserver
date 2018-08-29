@@ -114,3 +114,7 @@ int do_creat(const char* path, mode_t mode){
     return creat(path, mode);
 }
 
+int do_unlink(const char* path){
+    return unlink(path);
+}
+
