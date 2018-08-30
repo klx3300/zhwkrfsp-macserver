@@ -2,7 +2,7 @@
 #include "zhwkre/log.h"
 #include "netwrap.h"
 #include "zhwkre/bss.h"
-#include <error.h>
+#include <mach/error.h>
 #include <errno.h>
 #include <string.h>
 
@@ -44,7 +44,7 @@ int as_read(qSocket streamsock, struct OpRead* dest, struct ConnInfo ci){
 
 int as_write(qSocket streamsock, struct OpWrit* dest, void* buffer, size_t remain, struct ConnInfo ci){
     qBinarySafeString recvbuf = qbss_constructor();
-    int extra = remain - sizeof(struct OpWrit);
+    int extra = (int)(remain - sizeof(struct OpWrit));
     if(sockread(streamsock, &recvbuf, sizeof(struct OpWrit))){
         qLogWarnfmt("as_write(): Read [OPER] fail at %d[%s] %s\n", ci.connuid, ci.srcaddr, strerror(errno));
         qbss_destructor(recvbuf);
@@ -101,7 +101,7 @@ int re_open(qSocket sock, struct RpOpen* dest, struct ConnInfo ci){
 
 int re_read(qSocket sock, void* buffer, size_t remain, struct ConnInfo ci){
     qBinarySafeString bss = qbss_constructor();
-    if(sockread(sock, &bss, remain)){
+    if(sockread(sock, &bss, (int)remain)){
         qLogWarnfmt("re_open(): Read fail at %d[%s] %s\n", ci.connuid, ci.srcaddr, strerror(errno));
         qbss_destructor(bss);
         return -1;
@@ -110,3 +110,5 @@ int re_read(qSocket sock, void* buffer, size_t remain, struct ConnInfo ci){
     qbss_destructor(bss);
     return 0;
 }
+
+

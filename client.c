@@ -9,6 +9,7 @@
 #include "zhwkre/concurrent.h"
 #include "zhwkre/log.h"
 #include "zhwkre/utils.h"
+#include "zhwkre/concurrent.h"
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -26,6 +27,7 @@ static PtrChar READ_MODES[] = {
 };
 
 static char basepath[FILENAME_LEN] = {0};
+static char destaddr[40] = {0};
 static int debug_mode = 0;
 static qSocket conn;
 
@@ -43,6 +45,7 @@ int bad_reply(uint32_t ouid, int32_t rtvl);
 int good_reply(uint32_t ouid, int32_t rtvl, void* rephdr, size_t hdrsize, void* payload, size_t plsize);
 int process_args(int argc, char** argv);
 void* serve_filesystem(char* eachop);
+void* serve_wrapper(void* recvbss);
 
 #define PRINTERRNO(lvl) qLog##lvl##fmt("%s()[%s:%d] reported error: %s\n", __func__, __FILE__, __LINE__, strerror(errno))
 #define DEBUGINFO(fmt, ...) do{if(debug_mode >= DEBUG_DETAILED) qLogDebugfmt(fmt, __VA_ARGS__);}while(0)
@@ -58,6 +61,37 @@ int main(int argc, char** argv){
         return rtvl;
     DEBUGCONS_END
     if(process_args(argc, argv)) return 1;
+    conn.domain = qIPv4;
+    conn.type = qStreamSocket;
+    conn.protocol = qDefaultProto;
+    if(qSocket_open(conn)){
+        PRINTERRNO(Fail);
+        return 1;
+    }
+    DEBUGINFO("Connecting ==> %s", destaddr);
+    if(qStreamSocket_connect(conn, destaddr)){
+        PRINTERRNO(Fail);
+        return 1;
+    }
+    DEBUGINFO("Connected <=> %s", destaddr);
+    // read things off
+    while(1){
+        qBinarySafeString *recvbss = malloc(sizeof(qBinarySafeString));
+        *recvbss = qbss_constructor();
+        if(sockread(conn, recvbss, sizeof(struct OpHdr))){
+            PRINTERRNO(Fail);
+            return 1;
+        }
+        if(sockread(conn, recvbss, (int)(((struct OpHdr*)(void*)(recvbss->str))->size - sizeof(struct OpHdr)))){
+            PRINTERRNO(Fail);
+            return 1;
+        }
+        // done, pass to..
+        if(qRun(serve_wrapper, recvbss)){
+            PRINTERRNO(Fail);
+            return 1;
+        }
+    }
 }
 
 int debug_console(){
@@ -415,9 +449,9 @@ void* serve_filesystem(char* eachop){
 }
 
 int process_args(int argc, char** argv){
-    if(argc < 2){
+    if(argc < 3){
         // insufficient args, enter help mode.
-        printf("Usage: %s <path> [detailed|interactive]\n", argv[0]);
+        printf("Usage: %s <path> <destaddr:port> [detailed|interactive]\n", argv[0]);
         return 1;
     }
     // check if accessible
@@ -429,12 +463,14 @@ int process_args(int argc, char** argv){
     }
     // so it is accessible.
     strcpy(basepath, argv[1]);
+    // copy the address
+    strcpy(destaddr, argv[2]);
     // there are two debug modes: detailed and interactive
     // interactive is more strict than detailed.
-    if(argc > 2){
-        if(fullstrcmp(argv[2], DEBUG_INTERACTIVE_STR)){
+    if(argc > 3){
+        if(fullstrcmp(argv[3], DEBUG_INTERACTIVE_STR)){
             debug_mode = DEBUG_INTERACTIVE;
-        }else if(fullstrcmp(argv[2], DEBUG_DETAILED_STR)){
+        }else if(fullstrcmp(argv[3], DEBUG_DETAILED_STR)){
             debug_mode = DEBUG_DETAILED;
         }
     }
@@ -447,4 +483,12 @@ void preprocess_path(char* fn){
     strcat(buffer, fn);
     DEBUGINFO("Concatenated path is %s", buffer);
     memcpy(fn, buffer, FILENAME_LEN);
+}
+
+void* serve_wrapper(void* rbss){
+    qBinarySafeString* recv_bss = rbss;
+    serve_filesystem(recv_bss->str);
+    qbss_destructor(*recv_bss);
+    free(rbss);
+    return NULL;
 }

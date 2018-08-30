@@ -63,11 +63,11 @@ static int last_seek = 0;
 
 int do_opendir(const char* fn){
     int tail = last_seek;
-    while((dirdescs[last_seek] == NULL) && (last_seek < MAX_DIR_DESC)) last_seek++;
+    while((dirdescs[last_seek] != NULL) && (last_seek < MAX_DIR_DESC)) last_seek++;
     if(last_seek >= MAX_DIR_DESC){
         // find again
         last_seek = 0;
-        while((dirdescs[last_seek] == NULL) && (last_seek < tail)) last_seek++;
+        while((dirdescs[last_seek] != NULL) && (last_seek < tail)) last_seek++;
         if(last_seek >= tail){
             // fd list is full.
             errno = EMFILE;
