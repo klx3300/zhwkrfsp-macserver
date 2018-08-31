@@ -403,6 +403,19 @@ void* serve_filesystem(char* eachop){
             }
             if(good_reply(ophead->ouid, result, NULL, 0, NULL, 0)) PRINTERRNO(Warn);
             return NULL;
+        }else if(wrinfo->write_mode == WR_RMDIR){
+            DEBUGCONS_BEGIN(rtvl, "Writ::Rmdir * %s *", wrinfo->filename)
+                if(bad_reply(ophead->ouid, rtvl)) PRINTERRNO(Warn);
+                return NULL;
+            DEBUGCONS_END;
+            int result = do_rmdir(wrinfo->filename);
+            if(result < 0){
+                PRINTERRNO(Warn);
+                if(bad_reply(ophead->ouid, -errno)) PRINTERRNO(Warn);
+                return NULL;
+            }
+            if(good_reply(ophead->ouid, result, NULL, 0, NULL, 0)) PRINTERRNO(Warn);
+            return NULL;
         }
         // control flow should not reach here..
         qLogFailfmt("%s(): fatal in control flow design: is there protocol version mismatch?", __func__);
