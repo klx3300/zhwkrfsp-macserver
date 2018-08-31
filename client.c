@@ -176,11 +176,10 @@ void* serve_filesystem(char* eachop){
         // process the open operation
         // we need to dispatch it to different functions!
         // direct, nofollow and truc can pass to the open();
-        if(!(openinfo->flags & (OPEN_MKDIR |  OPEN_DIRECTORY))){
+        if(!(openinfo->flags & (OPEN_MKDIR |  OPEN_DIRECTORY | OPEN_CREAT))){
             int fd = do_open(openinfo->filename, O_RDWR | 
                     (openinfo->flags & OPEN_NOFOLLOW ? O_NOFOLLOW : 0) |
-                    (openinfo->flags & OPEN_TRUNC ? O_TRUNC : 0) | 
-                    (openinfo->flags & OPEN_CREAT ? O_CREAT : 0));
+                    (openinfo->flags & OPEN_TRUNC ? O_TRUNC : 0));
             if(fd < 0){
                 // error case
                 int reply_result = bad_reply(ophead->ouid, -errno);
@@ -214,12 +213,25 @@ void* serve_filesystem(char* eachop){
         }
         if(openinfo->flags & OPEN_MKDIR){
             int result = do_mkdir(openinfo->filename, openinfo->mode);
-            if(result){
+            if(result < 0){
                 if(bad_reply(ophead->ouid, -errno)) PRINTERRNO(Warn);
                 return NULL;
             }
             if(good_reply(ophead->ouid, 0, NULL, 0, NULL, 0)) PRINTERRNO(Warn);
             return NULL;
+        }
+        if(openinfo->flags & OPEN_CREAT){
+            int result = do_creat(openinfo->filename, openinfo->mode);
+            if(result < 0){
+                if(bad_reply(ophead->ouid, -errno)) PRINTERRNO(Warn);
+                return NULL;
+            }
+            struct RpOpen oresult;
+            oresult.file_handle = (uint64_t)result;
+            oresult.ignore_above = 0;
+            if(good_reply(ophead->ouid, 0, &oresult, sizeof(struct RpOpen), NULL, 0)) PRINTERRNO(Warn);
+            return NULL;
+            
         }
         // there's no possible that the control flow reaches here.
         // so we fall into debug console here..
