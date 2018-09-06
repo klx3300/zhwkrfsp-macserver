@@ -5,6 +5,8 @@
 #include <sys/statvfs.h>
 #include <sys/param.h>
 #include <sys/mount.h>
+#include <sys/time.h>
+#include <utime.h>
 #include <dirent.h>
 #include <unistd.h>
 #include "zhwkre/bss.h"
@@ -29,5 +31,6 @@ int do_releasedir(int fd);
 int do_access(const char* path, int mode);
 int do_creat(const char* path, mode_t mode);
 int do_unlink(const char* path);
+int do_utimens(const char* path, struct timespec times[2]);
 
 #endif

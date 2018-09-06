@@ -118,3 +118,6 @@ int do_unlink(const char* path){
     return unlink(path);
 }
 
+int do_utimens(const char* path, struct timespec times[2]){
+    return utimensat(0, path, times, 0);
+}

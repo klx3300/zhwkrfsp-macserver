@@ -428,6 +428,29 @@ void* serve_filesystem(char* eachop){
             }
             if(good_reply(ophead->ouid, result, NULL, 0, NULL, 0)) PRINTERRNO(Warn);
             return NULL;
+        }else if(wrinfo->write_mode == WR_MODTIME){
+            struct TimeModder *tmod = (void*)contptr;
+            DEBUGCONS_BEGIN(rtvl, "Writ::Utimes %s <- A %lld.%lld M %lld.%lld", wrinfo->filename, tmod->atime_sec, tmod->atime_nsec, tmod->mtime_sec, tmod->mtime_nsec)
+                if(bad_reply(ophead->ouid, rtvl)) PRINTERRNO(Warn);
+                return NULL;
+            DEBUGCONS_END;
+            struct timespec tv[2];
+            tv[0].tv_sec = tmod->atime_sec;
+            tv[0].tv_nsec = tmod->atime_nsec;
+            tv[1].tv_sec = tmod->mtime_sec;
+            tv[1].tv_nsec = tmod->mtime_nsec;
+            if(tmod->flags & TM_ANOW) tv[0].tv_nsec = UTIME_NOW;
+            else if(tmod->flags & TM_AIGN) tv[0].tv_nsec = UTIME_OMIT;
+            if(tmod->flags & TM_MNOW) tv[1].tv_nsec = UTIME_NOW;
+            else if(tmod->flags & TM_MIGN) tv[1].tv_nsec = UTIME_OMIT;
+            int result = do_utimens(wrinfo->filename, tv);
+            if(result < 0){
+                PRINTERRNO(Warn);
+                if(bad_reply(ophead->ouid, -errno)) PRINTERRNO(Warn);
+                return NULL;
+            }
+            if(good_reply(ophead->ouid, result, NULL, 0, NULL, 0)) PRINTERRNO(Warn);
+            return NULL;
         }
         // control flow should not reach here..
         qLogFailfmt("%s(): fatal in control flow design: is there protocol version mismatch?", __func__);

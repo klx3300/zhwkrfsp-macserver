@@ -26,4 +26,3 @@ For debug purposes, there's two debug levels:
 
 ### Known Bugs
 
-- As protocol hasn't specified, now the modification of `a/m/c time`s is not supported.
